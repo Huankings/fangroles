@@ -1,0 +1,15 @@
+.gradle/*
+.idea/*
+build/*
+run/*
+gradle/*
+!gradle/wrapper/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# libs 里只保留真正的模组 jar，避免把 sources / dev jar 也提交进去。
+# 注意：绝对不能整体忽略 libs/，否则协作者 clone 后无法编译。
+libs/*
+!libs/*.jar
+libs/*-sources.jar
+libs/*-dev.jar

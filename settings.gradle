@@ -1,0 +1,12 @@
+// fangroles 工程入口配置。
+// 只声明 Fabric 的插件仓库即可：Loom 插件本身由 maven.fabricmc.net 提供。
+// 与 NoellesRoles / kinssaba 保持完全一致的写法，避免换工程时出现插件解析差异。
+pluginManagement {
+    repositories {
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+        gradlePluginPortal()
+    }
+}

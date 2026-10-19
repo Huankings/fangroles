@@ -1,0 +1,15 @@
+{
+  "ui.fangroles.pagination.previous": "Previous",
+  "ui.fangroles.pagination.next": "Next",
+
+  "hud.fangroles.unknown_player": "Unknown player",
+
+  "announcement.role.fangroles.example": "Example Role",
+  "announcement.goals.fangroles.example": "A placeholder role used to verify the translation pipeline",
+
+  "announcement.modifier.fangroles.example": "Example Modifier",
+
+  "death_reason.fangroles.example": "Example death reason",
+
+  "replay.fangroles.example": "%s triggered an example event"
+}

@@ -1,0 +1,152 @@
+plugins {
+    id 'fabric-loom' version '1.13-SNAPSHOT'
+    id 'maven-publish'
+}
+
+/**
+ * 优先拾取 libs 目录里手动替换过的本地模组包。
+ *
+ * <p>这是本模板最关键的一段联调逻辑：Wathe / HarpyModLoader / NoellesRoles 都是自改版，
+ * 不会发布到公共 Maven。所以只要把编译好的 jar 丢进 {@code libs/}，
+ * Gradle 就会自动按“最后修改时间最新”的那一份来编译，不需要改任何版本号。</p>
+ *
+ * <p>命名约定：{@code <前缀>-<版本>.jar}，例如：
+ * <ul>
+ *   <li>{@code wathe-1.3.3-1.21.1.jar}</li>
+ *   <li>{@code harpymodloader-1.2.3-h1.3.jar}</li>
+ *   <li>{@code noellesroles-1.6-h1.3.jar}</li>
+ * </ul>
+ * 注意不要同时放 {@code -sources.jar}，否则可能被误选为依赖（只放普通 jar）。</p>
+ */
+def findLatestLocalModJar(String prefix) {
+    return fileTree(dir: "libs", include: ["${prefix}-*.jar"])
+            .files
+            .findAll { !it.name.endsWith("-sources.jar") && !it.name.endsWith("-dev.jar") }
+            .sort { left, right -> right.lastModified() <=> left.lastModified() }
+            .find()
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+loom {
+    // 分离客户端与服务端源码集：src/main/java 只放服务端/公共逻辑，
+    // src/client/java 放 HUD、渲染、按键、客户端缓存。
+    // 这样客户端专属类不会被打进服务端运行环境，也不会误用只存在于客户端的类。
+    splitEnvironmentSourceSets()
+
+    mods {
+        "fangroles" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
+
+repositories {
+    // Loom 会自动加入 Minecraft / Fabric 官方仓库，这里只需要补充本模板用到的第三方仓库。
+    maven {
+        name = "Ladysnake Mods"
+        url = 'https://maven.ladysnake.org/releases'
+    }
+    maven {
+        name = 'Xander Maven'
+        url = 'https://maven.isxander.dev/releases'
+    }
+    // Datasync：Ratatouille 的传递依赖，缺少这个仓库会导致
+    // 「Could not find dev.upcraft.datasync:datasync-minecraft-...」配置期失败。
+    maven {
+        name = "Datasync"
+        url = "https://maven.uuid.gg/releases"
+    }
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content {
+            includeGroup "maven.modrinth"
+        }
+    }
+}
+
+dependencies {
+    // ---- 平台本身 ----
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // ---- 三个自改版上游模组：优先本地 libs jar，找不到才回退 Maven 坐标 ----
+    // 用 modApi 而不是 modImplementation：这三个上游的类型会出现在本模组的公开签名里，
+    // 需要把它们的依赖信息传递给下游，方便后续再有扩展依赖 fangroles。
+    def localWatheJar = findLatestLocalModJar("wathe")
+    def localHarpyJar = findLatestLocalModJar("harpymodloader")
+    def localNoellesJar = findLatestLocalModJar("noellesroles")
+
+    modApi(localWatheJar != null ? files(localWatheJar) : "dev.doctor4t:wathe:${project.wathe_version}")
+    modApi(localHarpyJar != null ? files(localHarpyJar) : "maven.modrinth:harpymodloader:${project.harpy_mod_loader_version}")
+    modApi(localNoellesJar != null ? files(localNoellesJar) : "maven.modrinth:noelles-roles-tmm:${project.noelles_roles_version}")
+
+    // ---- 上游用到的库：本工程直接引用它们的类型时也必须声明 ----
+    modImplementation "org.ladysnake.cardinal-components-api:cardinal-components-base:${project.cca_version}"
+    modImplementation "org.ladysnake.cardinal-components-api:cardinal-components-entity:${project.cca_version}"
+    modImplementation "org.ladysnake.cardinal-components-api:cardinal-components-world:${project.cca_version}"
+    modImplementation "org.ladysnake.cardinal-components-api:cardinal-components-scoreboard:${project.cca_version}"
+    modImplementation "dev.isxander:yet-another-config-lib:${project.yacl_version}"
+    modImplementation "dev.doctor4t:ratatouille:${project.ratatouille_version}"
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", project.minecraft_version
+    inputs.property "loader_version", project.loader_version
+    filteringCharset "UTF-8"
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+                "minecraft_version": project.minecraft_version,
+                "loader_version": project.loader_version
+    }
+}
+
+def targetJavaVersion = 21
+tasks.withType(JavaCompile).configureEach {
+    // 强制 UTF-8 编码：本工程所有注释和 lang 文件都是中文，
+    // 不写这一行时在 GBK 默认环境的机器上会出现中文乱码或编译报错。
+    it.options.encoding = "UTF-8"
+    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+        it.options.release.set(targetJavaVersion)
+    }
+}
+
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+    // 保留 sources jar，便于把本模组作为依赖时同步查看源码。
+    withSourcesJar()
+}
+
+jar {
+    from("LICENSE.txt") {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+}
+
+// Maven 发布配置（当前没有内部仓库，保留以便后续接 CI）
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+
+    repositories {
+        // 需要发布时在这里补充仓库地址。
+    }
+}

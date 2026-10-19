@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "fangroles",
+  "version": "${version}",
+  "name": "FangRoles",
+  "description": "基于自改版 Wathe + HarpyModLoader + NoellesRoles 的扩展职业 Mod。当前为模板骨架，尚未实现具体职业。",
+  "authors": [],
+  "contact": {},
+  "license": "LGPL-3.0",
+  "icon": "assets/fangroles/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "org.agmas.fangroles.Fangroles"
+    ],
+    "client": [
+      "org.agmas.fangroles.client.FangrolesClient"
+    ],
+    "cardinal-components": [
+      "org.agmas.fangroles.FangRolesComponents"
+    ]
+  },
+  "custom": {
+    "cardinal-components": [
+    ]
+  },
+  "mixins": [
+    "fangroles.mixins.json",
+    {
+      "config": "fangroles.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}",
+    "wathe": "*",
+    "harpymodloader": "*",
+    "noellesroles": "*"
+  },
+  "suggests": {
+    "ratatouille": "*",
+    "yet_another_config_lib_v3": "*",
+    "cardinal-components-api": "*"
+  }
+}
