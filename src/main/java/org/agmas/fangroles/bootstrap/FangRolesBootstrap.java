@@ -17,7 +17,9 @@ import org.agmas.fangroles.registry.FangRolesRoleGroups;
 import org.agmas.fangroles.registry.FangRolesModifierRegistry;
 import org.agmas.fangroles.registry.FangRolesRoleRegistry;
 import org.agmas.fangroles.roleassign.FangRolesRoleAssignedBootstrap;
+import org.agmas.fangroles.roles.poisoner.PoisonerTimekeeperHandler;
 import org.agmas.fangroles.shop.FangRolesShopBootstrap;
+import org.agmas.fangroles.sync.FangRolesPlayerComponentSyncHandlers;
 import org.agmas.fangroles.tray.FangRolesTrayEffects;
 import org.agmas.fangroles.victory.FangRolesVictoryRules;
 import org.agmas.fangroles.visibility.FangRolesTargetVisibilityHandlers;
@@ -88,6 +90,10 @@ public final class FangRolesBootstrap {
         FangRolesTargetVisibilityHandlers.init();
         FangRolesPlayerCollisionHandlers.init();
         FangRolesItemPickupHandlers.init();     // 普通掉落物拾取（PASS / ALLOW / DENY）
+        FangRolesPlayerComponentSyncHandlers.init(); // 私有组件选择性观察者同步
+
+        // 毒气云/毒气弹是自定义实体，毒气状态是自定义组件；必须在时停者首张历史快照前注册。
+        PoisonerTimekeeperHandler.init();
 
         // ---- 5. Wathe 公开 API 接入（按 API 领域拆分，聚合类只调用各职业 handler）----
         FangRolesMovementBootstrap.init();     // 体力（含免消耗规则）与移动速度修正

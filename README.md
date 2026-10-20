@@ -41,9 +41,9 @@ libs/
 
 > 只放普通 jar，**不要**把 `-sources.jar` / `-dev.jar` 放进 `libs/`（构建脚本已过滤，但仍建议保持目录干净）。
 >
-> **2026-10-18 同步**：`libs/` 已再次更新为最新自改版 Wathe 与 NoellesRoles 构建产物，
-> 并执行 `gradlew clean build` 验证通过。本轮新增公开 API 与 fangroles 注册入口见本文第八节；
-> 2026-10-17 的疯魔 / 网络改动见第七节。
+> **2026-10-20 同步**：`libs/` 已更新为最新自改版 Wathe 与 NoellesRoles 构建产物，
+> 并执行 `gradlew clean build` 验证通过。本轮新增私有组件观察者同步 API，
+> 见本文第九节；2026-10-18 的输入 / 拾取 / 心情类型等改动见第八节。
 
 ### 1.3 构建
 
@@ -109,6 +109,7 @@ Gradle 版本为 **9.3.0**（wrapper 已内置，无需本机安装 Gradle）。
 | `bootstrap/FangRolesRoundEndBootstrap.java` | 结算阵营迁移规则聚合 |
 | `pickup/FangRolesItemPickupHandlers.java` | 普通掉落物拾取规则聚合 |
 | `reset/FangRolesResetBootstrap.java` | 玩家 / 世界重置规则聚合 |
+| `sync/FangRolesPlayerComponentSyncHandlers.java` | 私有组件选择性观察者同步规则聚合 |
 | `bootstrap/FangRolesBlackoutBootstrap.java` | 停电 API 接入 |
 | `bootstrap/FangRolesReplayBootstrap.java` | 回放 formatter 注册 |
 | `combat/FangRolesCombatBootstrap.java` | 枪击 / 匕首冷却 / 武器目标 API 接入 |
@@ -356,6 +357,9 @@ Harpy 会自动生成 announcement，但**仍然要自己补翻译**，否则显
     `KnifeCooldownApi`，普通掉落物拾取走 `ItemPickupApi`，动态心情类型走 `PlayerMoodTypeApi`，
     结算栏目迁移走 `RoundEndFactionApi`，体力免消耗走 `PlayerStaminaApi.registerConsumptionRule`。
     具体语义与 fangroles 注册入口见第八节。
+11. **要观察其他玩家的私有组件时，不要改回全员同步。** 用 `PlayerComponentSyncApi` 注册窄范围
+    观察者规则；它只支持 Wathe 的七个私有组件，授权整个组件且每 20 tick 才检查权限变化。
+    详见第九节。
 
 ### 5.1 能力键：复用 NoellesRoles（不额外注册）
 
@@ -621,5 +625,94 @@ NoellesRoles 侧的对应参考实现：
 - `bootstrap/NoellesRolesMoodTypeBootstrap`、`bootstrap/NoellesRolesRoundEndBootstrap`
 - `reset/NoellesRolesResetBootstrap` + 各职业 `*ResetHandler`
 - `roles/cook/CookStaminaHandler`（体力免消耗的完整范例）
+
+---
+
+## 九、上游最新增量：私有组件观察者同步（2026-10-20 同步）
+
+本轮把最新 Wathe / NoellesRoles 构建产物覆盖到 `libs/`，并执行 `gradlew clean build` 通过。
+新增核心是 Wathe 的 `PlayerComponentSyncApi`：在“私有组件默认只同步本人”的前提下，
+允许少数职业在客户端观察目标的真实状态，而不重新开启全员广播。
+
+### 9.1 为什么需要
+
+Wathe 的毒药、心情、体力、商店、便签、手雷投掷模式和本能组件默认只同步给本人。
+服务端能读取任意目标的组件，并不代表观察者客户端也有最新值。例如原生杀手本能需要读取
+无辜目标的真实心情来显示绿色 / 蓝色 / 紫色；如果心情仍只同步本人，观察者客户端会一直看到
+默认满值，所有目标都会保持绿色。NoellesRoles 的制毒师、医师、酒保也有同样问题：
+客户端本能要读目标 `PlayerPoisonComponent.poisonTicks`，只同步本人会让本能永远看不到真毒。
+
+### 9.2 注册规则：`PlayerComponentSyncApi`
+
+```java
+PlayerComponentSyncApi.registerObserverRule(
+        FangRolesCore.id("sync/my_role_target_mood"),
+        PlayerMoodComponent.KEY,
+        PlayerComponentSyncApi.DEFAULT_PRIORITY,
+        context -> {
+            // 只做“是否允许该 recipient 观察 owner”的服务端判断。
+            return shouldMyRoleSee(context.owner(), context.recipient());
+        }
+);
+```
+
+- `context.owner()` 是状态所属玩家，`context.recipient()` 是需要观察该目标的客户端玩家。
+- 规则返回 `true` 允许，`false` 继续询问低优先级；priority 越大越先执行；
+  相同 `registrationId` 重复注册会替换旧规则。
+- 组件所属玩家**本人始终允许**，API 不接受“否决本人”的规则。
+- 规则只在**服务端**执行，必须使用服务端真实职业 / 词条 / 组件状态；
+  不能读取客户端本能按键、`MinecraftClient` 或只在客户端存在的缓存。
+- 当前只支持 Wathe 的七个组件：
+  `poison`、`mood`、`stamina`、`shop`、`note`、`grenade_throw_mode`、`instinct`。
+  其它组件（包括 fangroles 自定义 CCA）注册会抛 `IllegalArgumentException`。
+- 授权的是**整个组件默认 NBT**，不是字段级过滤。若只想给观察者一个布尔标记，
+  应另做最小显示状态，不能把完整组件当“只读一个字段”使用。
+- API 由 Wathe 自己初始化；fangroles 只负责注册规则，不要重复调用 `initialize()`。
+
+### 9.3 刷新、清理与转职
+
+- API 每 `GameConstants.COMPONENT_OBSERVER_REFRESH_INTERVAL_TICKS`（默认 20 tick）检查一次授权关系：
+  新增权限时补发一次，失去权限时发送一次空 NBT 清空客户端缓存，权限未变化时不发包。
+  因此**不会**因为观察规则产生逐 tick 广播。
+- 客户端应该只在自己仍追踪目标时收到包；API 不扩大实体追踪距离，也不会把全服玩家状态广播给观察者。
+- 局中转职时，观察者可能刚获得能力，但目标组件没有刚好发生变化。可在职业分配完成后调用：
+  `PlayerComponentSyncApi.syncTrackedToRecipient(key, serverPlayer)`。
+  它只遍历该客户端当前追踪的目标，新增允许时补发真实状态，失去权限时发送空状态清理。
+- 观察缓存只记录网络关系，不写存档、不参加时停快照；断线时删除实体引用，服务器停止时清空。
+  回溯改变职业后应按当前真实身份重新判定，而不是恢复旧连接关系。
+
+### 9.4 Wathe 原生本能心情规则
+
+Wathe 新增 `game/instinct/InstinctMoodSyncHandler`，为原生本能注册了唯一一条心情观察规则：
+对局内**存活的无辜目标**，允许**存活且拥有杀手能力**的观察者（含扩展杀手职业）以及
+旁观 / 创造视角接收目标心情。杀手观察杀手仍走固定红色分支，不需要目标心情。
+
+fangroles **不要**为原生本能重复注册同一 `PlayerMoodComponent` 规则；
+只有确实新增了“另一类观察者”时才注册自己的窄规则。心情组件仍保持原有的 5 tick 校准节奏，
+任务结构变化和主动设置仍立即同步，本轮没有新增逐 tick 广播。
+
+### 9.5 fangroles 新增的注册入口
+
+- [sync/FangRolesPlayerComponentSyncHandlers.java](src/main/java/org/agmas/fangroles/sync/FangRolesPlayerComponentSyncHandlers.java)
+  - `init()`：在 [FangRolesBootstrap.java](src/main/java/org/agmas/fangroles/bootstrap/FangRolesBootstrap.java) 中调用，
+    未来由这里调用各职业 / 词条的 `*ComponentSyncHandler.init()`。
+  - `registerRoleAssignedRefresh(...)`：职业 handler 用它注册“转职后补发当前追踪目标”的回调。
+  - `syncTrackedTargetsAfterRoleAssigned(player)`：由
+    [FangRolesRoleAssignedBootstrap.java](src/main/java/org/agmas/fangroles/roleassign/FangRolesRoleAssignedBootstrap.java)
+    的 `ModdedRoleAssigned` 监听统一调用；当前没有职业，回调为空，不产生额外网络包。
+- 未来规则放置位置：`roles/<role_id>/<RoleName>ComponentSyncHandler` 或
+  `modifiers/<modifier_id>/<ModifierName>ComponentSyncHandler`。
+- 命名与职责对齐 NoellesRoles：`poison/NoellesPoisonSyncHandler` 聚合
+  `BartenderPoisonSyncHandler`、`DrugmakerPoisonSyncHandler`、`PhysicianPoisonSyncHandler`。
+
+### 9.6 接入检查
+
+- 只在**通用初始化**注册观察者规则，不能只放客户端入口。
+- 先判断“是否真的需要观察目标组件”；能在服务端完成的能力不要为了 HUD 方便而同步。
+- 规则只判断职业 / 词条 / 存活 / 对局状态，不修改组件、不发任务、不写回放、不触发玩法结果。
+- 失去权限时的空 NBT 清理依赖组件使用默认 CCA NBT；自定义二进制 codec 不要接入本 API。
+- 转职、回溯、死亡、断线重连后确认客户端缓存能被补发或清空；客户端 provider 仍要判断当前职业和存活。
+- 变更支持组件的同步格式或默认读取行为时，必须同步调整撤销授权时的清空协议。
+
 
 

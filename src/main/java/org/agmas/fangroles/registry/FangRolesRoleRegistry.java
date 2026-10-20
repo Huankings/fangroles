@@ -3,6 +3,7 @@ package org.agmas.fangroles.registry;
 import dev.doctor4t.wathe.api.Faction;
 import dev.doctor4t.wathe.api.Role;
 import dev.doctor4t.wathe.api.WatheRoles;
+import org.agmas.fangroles.roles.poisoner.PoisonerConstants;
 
 /**
  * fangroles 的职业 {@link Role} 实例注册表。
@@ -59,17 +60,30 @@ import dev.doctor4t.wathe.api.WatheRoles;
  * //    "announcement.goals.fangroles.vanisher": "在被发现之前让所有人消失"
  * }</pre>
  *
- * <p><b>注意</b>：本类当前刻意不注册任何职业。模板阶段注册空职业会让 Harpy 日志出现
- * 无翻译、无上限、无分配规则的职业，反而不利于后续排查。</p>
+ * <p><b>注意</b>：当前已注册毒师。新增职业时仍按上面的顺序补 id、Role、上限、分配规则和翻译，
+ * 不要只写一个没有实现的占位 Role。</p>
  */
 public final class FangRolesRoleRegistry {
 
     // ---------------------------------------------------------------------
-    // 职业实例定义区（当前为空）
-    //
-    // 新增职业时把范例外面的 `public static final Role XXX = ...` 写在这里。
-    // 顺序建议：平民 → 义警 → 杀手 → 中立，和 Wathe 的注册顺序保持一致，便于比对。
+    // 职业实例定义区
     // ---------------------------------------------------------------------
+
+    /**
+     * 毒师：杀手阵营。
+     *
+     * <p>Mood / 冲刺时间 / 是否看时间全部读取 Wathe 杀手模板，避免以后上游调整杀手数值时
+     * 毒师还停留在旧值；阵营用 registerKillerRole 显式登记，保证 Harpy 分配和胜利结算走杀手池。</p>
+     */
+    public static final Role POISONER = WatheRoles.registerKillerRole(new Role(
+            FangRolesIds.POISONER_ID,
+            PoisonerConstants.ROLE_COLOR,
+            false,
+            true,
+            WatheRoles.KILLER.getMoodType(),
+            WatheRoles.KILLER.getMaxSprintTime(),
+            WatheRoles.KILLER.canSeeTime()
+    ));
 
     private FangRolesRoleRegistry() {
     }
@@ -85,7 +99,7 @@ public final class FangRolesRoleRegistry {
      * 或注册跨系统分组），也统一写在这个方法里。</p>
      */
     public static void init() {
-        // 触发类加载：静态字段的职业注册在这一刻完成。
-        // 目前没有职业，所以这里是空实现；请勿删除本类与 FangRolesBootstrap 中的调用。
+        // 触发类加载：毒师等静态 Role 字段在这一刻完成注册。
+        // 保留本方法给后续“注册后处理”使用；请勿删除本类与 FangRolesBootstrap 中的调用。
     }
 }

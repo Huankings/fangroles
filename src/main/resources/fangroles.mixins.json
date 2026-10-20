@@ -4,6 +4,8 @@
   "package": "org.agmas.fangroles.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "roles.poisoner.GasSprintLockMixin",
+    "roles.poisoner.PlayerPoisonComponentRewardMixin"
   ],
   "injectors": {
     "defaultRequire": 1

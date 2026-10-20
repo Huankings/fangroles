@@ -1,6 +1,7 @@
 package org.agmas.fangroles.shop;
 
 import org.agmas.fangroles.registry.FangRolesCore;
+import org.agmas.fangroles.roles.poisoner.PoisonerShopHandler;
 
 /**
  * fangroles 商店注册总引导。
@@ -65,7 +66,7 @@ public final class FangRolesShopBootstrap {
      * 或者调用 {@code FangRolesShops} 里的交付逻辑。</p>
      */
     public static void init() {
-        // 目前没有职业，空实现。
-        FangRolesCore.LOGGER.debug("[fangroles] 商店注册完成（当前为空）");
+        PoisonerShopHandler.init();
+        FangRolesCore.LOGGER.debug("[fangroles] 商店注册完成");
     }
 }

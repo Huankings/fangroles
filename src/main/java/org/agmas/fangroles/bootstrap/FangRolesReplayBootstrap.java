@@ -1,6 +1,8 @@
 package org.agmas.fangroles.bootstrap;
 
 import org.agmas.fangroles.registry.FangRolesCore;
+import org.agmas.fangroles.record.FangRolesReplayFormatters;
+import org.agmas.fangroles.roles.poisoner.PoisonerReplayFormatters;
 
 /**
  * fangroles 回放格式化器（Replay formatter）注册入口。
@@ -50,7 +52,8 @@ public final class FangRolesReplayBootstrap {
      * 或者直接在本类按职业分组书写。建议职业数超过 3 个后改为按职业拆分文件。</p>
      */
     public static void register() {
-        // 目前没有回放事件，空实现。
-        FangRolesCore.LOGGER.debug("[fangroles] 回放格式化器注册完成（当前为空）");
+        PoisonerReplayFormatters.register();
+        FangRolesReplayFormatters.register();
+        FangRolesCore.LOGGER.debug("[fangroles] 回放格式化器注册完成");
     }
 }

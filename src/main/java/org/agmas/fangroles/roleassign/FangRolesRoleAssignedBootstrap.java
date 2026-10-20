@@ -1,6 +1,10 @@
 package org.agmas.fangroles.roleassign;
 
+import net.minecraft.server.network.ServerPlayerEntity;
 import org.agmas.fangroles.registry.FangRolesCore;
+import org.agmas.fangroles.roles.poisoner.PoisonerRoleAssignedHandler;
+import org.agmas.fangroles.sync.FangRolesPlayerComponentSyncHandlers;
+import org.agmas.harpymodloader.events.ModdedRoleAssigned;
 
 /**
  * fangroles 的 Harpy 角色 / 词条分配接入总引导。
@@ -60,10 +64,20 @@ public final class FangRolesRoleAssignedBootstrap {
      * <p>调用时机必须在职业与词条注册完成之后，见 {@code FangRolesBootstrap} 的顺序说明。</p>
      */
     public static void init() {
-        // 目前没有职业与词条，空实现。
-        // 新增职业时在这里补两件事：
-        //   1) ModdedRoleAssigned.EVENT.register(...) 之类的事件监听
-        //   2) roles/<role_id>/<RoleName>RoleAssignmentRules.init()
-        FangRolesCore.LOGGER.debug("[fangroles] 角色分配接入完成（当前为空）");
+        // 毒师分配后设置毒针 30 秒开局冷却。
+        ModdedRoleAssigned.EVENT.register(PoisonerRoleAssignedHandler::onRoleAssigned);
+
+        /*
+         * 转职后观察者权限可能刚变化，但目标组件本身没有发生状态变化。
+         * 这里统一补发一次当前追踪目标；具体需要刷新哪些组件由各职业
+         * *ComponentSyncHandler 通过 FangRolesPlayerComponentSyncHandlers 注册。
+         */
+        ModdedRoleAssigned.EVENT.register((player, role) -> {
+            if (player instanceof ServerPlayerEntity serverPlayer) {
+                FangRolesPlayerComponentSyncHandlers.syncTrackedTargetsAfterRoleAssigned(serverPlayer);
+            }
+        });
+
+        FangRolesCore.LOGGER.debug("[fangroles] 角色分配接入完成");
     }
 }

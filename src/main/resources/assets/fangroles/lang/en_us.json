@@ -11,5 +11,26 @@
 
   "death_reason.fangroles.example": "Example death reason",
 
-  "replay.fangroles.example": "%s triggered an example event"
+  "replay.fangroles.example": "%s triggered an example event",
+
+  "announcement.role.fangroles.poisoner": "Poisoner",
+  "announcement.goals.fangroles.poisoner": "Use your exclusive poisoned weapons to poison them!",
+
+  "item.fangroles.poison_needle": "Poison Needle",
+  "item.fangroles.poison_needle.tooltip": "Right-click a living player to inject poison\n30s initial cooldown / 45s cooldown\nReusable",
+  "item.fangroles.catalyst": "Catalyst",
+  "item.fangroles.catalyst.tooltip": "On a poisoned player: poison takes effect in 5s\nAlso resets the poison needle cooldown\nOn air or a non-poisoned player: only resets the cooldown",
+  "item.fangroles.poison_gas_bomb": "Poison Gas Bomb",
+  "item.fangroles.poison_gas_bomb.tooltip": "Right-click to throw a poison gas bomb\nThe gas spreads through open space\nIt can bypass partial blocks such as slabs and stairs\n5s inside the gas poisons you\nThe gas disperses after 30s",
+
+  "tip.fangroles.poisoner.reward": "Poisoner: poisoned %s, gained %s coins",
+
+  "replay.item_use.fangroles.poison_needle": "%s stabbed %s with a poison needle",
+  "replay.item_use.fangroles.poison_gas_bomb": "%s threw a poison gas bomb",
+  "replay.item_use.fangroles.catalyst": "%s used a catalyst on %s",
+  "replay.item_use.fangroles.catalyst.no_target": "%s used a catalyst",
+  "replay.poisoned.fangroles.gas_bomb.by": "%s inhaled poison gas released by %s and was poisoned",
+  "replay.poisoned.fangroles.gas_bomb": "%s inhaled poison gas and was poisoned",
+  "replay.poisoned.fangroles.catalyst.by": "%s's poison was catalyzed by %s",
+  "replay.poisoned.fangroles.catalyst": "%s's poison was catalyzed"
 }

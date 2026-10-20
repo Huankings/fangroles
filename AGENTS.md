@@ -51,6 +51,7 @@
 - `README_MOOD_TASK_API.md`：心情任务 API
 - `README_PSYCHO_MODE_API.md`：疯魔加时 / 加护盾 / 暂停恢复 / 图标冷却 API
 - `README_CLIENT_INPUT_API.md`：客户端键盘 / 鼠标 / KeyBinding / 最终动作 API
+- `README_PLAYER_COMPONENT_SYNC_API.md`：私有玩家组件的选择性观察者同步 API
 - `src/main/java/dev/doctor4t/wathe/Wathe.java`：总初始化、命令、网络包和系统注册
 - `src/main/java/dev/doctor4t/wathe/game/GameConstants.java`：核心常量、默认商店、冷却、体力、移动速度、心情惩罚、被动收入上限
 - `src/main/java/dev/doctor4t/wathe/game/GameFunctions.java`：开局、死亡、停局、地图重置、玩家存活判定
@@ -91,6 +92,7 @@
 | 本能 | `InstinctApi` |
 | 玩家存活 | `PlayerLifeStateApi` |
 | 体力 / 体力免消耗 | `PlayerStaminaApi`（含 `registerConsumptionRule` / `consumeStamina`）、`PlayerStaminaComponent` |
+| 私有组件观察者同步 | `api/sync/PlayerComponentSyncApi`、`PlayerComponentSyncApi.ObserverContext` |
 | 移动速度 | `PlayerMovementApi` |
 | 可见 / 可选中 / 可交互 / 可攻击 | `TargetVisibilityApi` |
 | 玩家物理碰撞 | `PlayerCollisionApi`、`PlayerCollisionContext`、`PlayerCollisionMode` |
@@ -128,7 +130,7 @@
 - 玩家私有组件（体力 / 心情 / 商店 / 中毒 / 便签 / 手雷 / 本能）已用 `shouldSyncWith` 只发本人；
   黑幕归属组件不再同步；`GameWorldComponent` 改为脏标记同步。
 
-**Wathe 2026-10-18 新增**：详见 7.11–7.14（输入 / 匕首 / 拾取 / 心情类型 / 结算阵营 / 重置）。
+**Wathe 2026-10-18 新增**：详见 7.11–7.14。**2026-10-20 新增**：私有组件观察者同步，见 7.15。
 
 ### 3.3 HarpyModLoader（`HarpyModLoader1`）
 
@@ -158,6 +160,7 @@ Harpy 按 `role.getFaction()` 分 **平民 / 义警 / 杀手 / 中立** 四个�
 - `bootstrap/NoellesRolesEventBootstrap.java`：事件、server tick、回合清理
 - `combat/NoellesRolesCombatBootstrap.java`：枪击 / 匕首冷却 API 接入总引导
 - `pickup/NoellesItemPickupHandlers.java`：掉落物拾取 API 聚合入口
+- `poison/NoellesPoisonSyncHandler.java`：毒药观察者同步聚合入口（酒保 / 制毒师 / 医师）
 - `reset/NoellesRolesResetBootstrap.java`：玩家 / 世界重置 handler 聚合入口
 - `death/NoellesRolesDeathBootstrap.java`：死亡保护与 DeathApi 分阶段接入
 - `bootstrap/NoellesRolesMovementBootstrap.java`：体力（含免消耗）与移速接入
@@ -181,13 +184,10 @@ Harpy 按 `role.getFaction()` 分 **平民 / 义警 / 杀手 / 中立** 四个�
 
 **2026-10 新增参考：杀手皇后 `roles/killer_queen`**
 
-- 服务端：`KillerQueenManager`（标记收束 / 招募 / 疯魔压制 / 回合 tick）、`KillerQueenAbility`、
-  `KillerQueenDeathHandler`、`KillerQueenGunHandler`、`KillerQueenMovementHandler`、
-  `KillerQueenTrayEffectHandler`、`KillerQueenVictoryRule`、`KillerQueenWorldComponent` / `KillerQueenPlayerComponent`。
-- 客户端：`client/roles/killer_queen/*`（HUD / 输入 / 音乐 / 托盘粒子）、
-  `client/instinct/roles/killer_queen/*`、`client/appearance/roles/killer_queen/*`。
-- 所有已有疯魔 profile 都已补 `cooldownItem`；新增疯魔照此登记，才能用 `ensureMinimumCooldown` 做跨职业冷却托底。
-- 疯魔被亡命时刻压制时用 Wathe `pause/resume` 保存同一次疯魔；影子小丑第四阶段 / 执照恶棍时刻只压音乐，不暂停服务端机制。
+- 服务端 `KillerQueenManager` / `KillerQueenAbility` / `KillerQueenVictoryRule` 等；
+  客户端 `client/roles/killer_queen/*`、`client/instinct/roles/killer_queen/*`、`client/appearance/roles/killer_queen/*`。
+- 所有疯魔 profile 已补 `cooldownItem`；亡命时刻用 `pause/resume`，
+  影子小丑 / 执照恶棍只压音乐，不暂停服务端机制。
 
 **2026-10-18 API 拆分参考**：`NoellesClientInputBootstrap` + `*InputRules`、
 `NoellesItemPickupHandlers` + `*ItemPickupHandler`、`NoellesRolesCombatBootstrap` + `*KnifeCooldownHandler`、
@@ -223,6 +223,7 @@ Harpy 按 `role.getFaction()` 分 **平民 / 义警 / 杀手 / 中立** 四个�
 | 疯魔加时 / 加护盾 / 暂停恢复 | `PsychoModeApi.addRemainingTicks` / `addArmourLayers` / `pause` / `resume`、`PsychoModeState`；不要把暂停写成 `stop` |
 | 疯魔图标最低冷却 | `PsychoModeProfile.Builder#cooldownItem` + `PsychoModeApi.ensureMinimumCooldown`；不要维护 profile-to-item 硬编码表 |
 | 玩家私有状态同步范围 | 组件 `shouldSyncWith`；不要为了客户端方便把本人 HUD / 商店 / 心情广播给所有人 |
+| 观察目标私有组件 | `PlayerComponentSyncApi.registerObserverRule`；不要改回全员同步或新增逐 tick 广播 |
 | 玩家碰撞 | `PlayerCollisionApi`；不要 mixin `Entity#collidesWith`、`EntityView#getEntityCollisions`、推挤方法 |
 | 体力 | `PlayerStaminaApi` / `PlayerStaminaComponent`；不要读旧 `sprintingTicks` NBT |
 | 体力免消耗 | `PlayerStaminaApi.registerConsumptionRule` + `consumeStamina(..., CUSTOM)`；不要用巨大上限 + 每 tick 回满 |
@@ -319,7 +320,7 @@ Harpy 会在 `refreshRoles()` 自动给非特殊职业生成 announcement；fang
 | 8 | `roles/<role_id>/<RoleName>RoleAssignmentRules.java` | Harpy 分配互斥 / 单向排斥 / 绑定生成 / 阶段补位 |
 | 9 | `roles/<role_id>/<RoleName>RoleAssignedHandler.java` | 分配后发开局物品、重置本局状态、设置开局冷却 |
 | 10 | `roles/<role_id>/<RoleName>ShopHandler.java` | 职业商店（或 `ShopApi.registerShopModifier`） |
-| 11 | `roles/<role_id>/` 各 handler | 按需：`Interaction` / `Gun` / `GunCooldown` / `KnifeCooldown` / `ItemPickup` / `Death` / `Movement` / `Stamina` / `PlayerCollision` / `Visibility` / `Blackout` / `Psycho` / `MoodTask` / `MoodType` / `RoundEnd` / `Reset` / `Victory` / `ReplayFormatters` |
+| 11 | `roles/<role_id>/` 各 handler | 按需：`Interaction` / `Gun` / `GunCooldown` / `KnifeCooldown` / `ItemPickup` / `ComponentSync` / `Death` / `Movement` / `Stamina` / `PlayerCollision` / `Visibility` / `Blackout` / `Psycho` / `MoodTask` / `MoodType` / `RoundEnd` / `Reset` / `Victory` / `ReplayFormatters` |
 | 12 | `roles/<role_id>/<RoleName>PlayerComponent.java` | 需要持久 / 同步状态时建 CCA 组件 |
 | 13 | `FangRolesComponents.java` | 注册 CCA 组件工厂 |
 | 14 | `src/main/resources/fabric.mod.json` | `custom.cardinal-components` 里补组件 id（**漏了组件不会被分配**） |
@@ -364,6 +365,7 @@ Harpy 会在 `refreshRoles()` 自动给非特殊职业生成 announcement；fang
 | 53 | `pickup/FangRolesItemPickupHandlers.java` | 掉落物拾取：调用各职业 / 词条 `*ItemPickupHandler.init()` |
 | 54 | `reset/FangRolesResetBootstrap.java` | 玩家 / 世界重置：调用各职业 / 词条 `*ResetHandler.init()` |
 | 55 | `client/input/FangClientInputBootstrap.java` | 客户端输入：调用各职业 / 词条 `*InputRules.register()` |
+| 56 | `sync/FangRolesPlayerComponentSyncHandlers.java` | 私有组件观察者：调用各职业 / 词条 `*ComponentSyncHandler.init()`，并注册转职后刷新回调 |
 
 ---
 
@@ -547,9 +549,6 @@ Tooltip：
 需要新死因或技能事件时同时补 5 项：事件 / 死因 id、`GameRecordManager` 记录、
 `ReplayRegistry` 格式化器、`zh_cn.json` / `en_us.json` 翻译、回合结束与玩家重置清理。
 
-回放数据尽量存稳定 id、UUID 和必要显示名兜底；展示文字用 `Text.translatable(...)`，
-**不要把中文句子硬编码进记录数据**。
-
 **回溯职业修正**：时停 / 时间回溯类机制在最终历史帧落地后，如果只静默修改运行时职业表，
 回放仍会沿用初始职业快照。此时必须调用
 `GameRecordManager.recordRoleCorrection(world, playerUuid, oldRole, newRole)`。
@@ -586,12 +585,8 @@ fangroles 与 NoellesRoles 共用同一个「能力」语义，因此**默认不
 3. **`wasPressed()` 只能读一次。** 它会消费按键事件，同一 tick 内多处调用只有第一处能拿到 `true`。
    所以要在唯一的能力分发器里读一次，再分发到各职业；不要在多个职业 handler 里各读一次。
 
-后续确实需要独立按键时（例如需要独立第二能力键，或 G 键已被别处占用）：
-
-1. 在 `FangClientKeybindings.register()` 里调用 `registerFallbackAbilityBind()`；
-2. 在 `lang/zh_cn.json` 与 `lang/en_us.json` 补回 `"key.fangroles.ability"` 翻译
-   （当前已移除，因为默认不注册该键；不补会显示成原始 key）；
-3. 在 `AGENTS.md` 与 `README.md` 里说明为什么不能再复用上游按键。
+确实需要独立按键时，在 `FangClientKeybindings.register()` 中调用 `registerFallbackAbilityBind()`，
+补回 `"key.fangroles.ability"` 翻译，并在 `AGENTS.md` / `README.md` 说明原因。
 
 ### 7.10 床效果与床粒子（两层分工）
 
@@ -613,37 +608,24 @@ Wathe 的床系统被拆成**服务端效果**和**客户端粒子**两层，两
 
 - 实现 `BedEffectHandler`（`effectId()`、`additiveItem()`、`canApply(...)`、`applyToBed(...)`、`onSleepTrigger(...)`），
   用 `BedEffectRegistry.register(handler)` 注册。
-- **标准塞床逻辑直接复用**，不要自己写扣物品 / 音效 / 回放：
-  `BedEffectRegistry.applyStandardEffect(player, heldStack, bed, pos, effectId, replaceExistingEffect)`；
-  需要额外回放字段时用带 `replayExtra` 的重载。
-- 查床用 `BedEffectRegistry.resolveHead(world, pos)`（把任意一半床解析成床头）
-  或 `findTriggeredBedEffect(world, centerPos)`（复用与本体一致的半径 2 + 3D Bresenham 视线检查）。
-- 「塞床」按**主手物品**识别（`getByAdditiveItem(...)` 走 `IdentityHashMap`），
-  所以塞床这个动作用真实物品；只有「购买后直接生效」才用 `ShopEntry.action(...)`，两者不要混淆。
+- **标准塞床逻辑直接复用** `BedEffectRegistry.applyStandardEffect(...)`，不要自己写扣物品 / 音效 / 回放；
+  查床用 `resolveHead(world, pos)` 或 `findTriggeredBedEffect(world, centerPos)`。
+- 塞床按**主手物品**识别；只有「购买后直接生效」才用 `ShopEntry.action(...)`，两者不要混淆。
 
 #### 客户端接入要点
 
 - provider 放 `client/roles/<role_id>/<RoleName>BedParticleHandler`，
-  由 `client/bed/FangRolesBedParticles.init()` 聚合（后者由 `FangClientParticleBootstrap` 调用）。
-- **返回语义（最容易写错）**：provider 按 priority 从高到低执行；
-  返回 `true` = 已处理，Wathe 停止链路；返回 `false` = 不是我的效果，继续问更低优先级。
-  判断出「是我的效果但观察者无权看到」时必须返回 `true`（已识别、故意不画），
-  **不能**返回 `false` —— 那会让链路继续走到更低优先级 provider，可能泄露别人的床效果信息。
-- Wathe 原生蝎子床粒子注册在 `Integer.MIN_VALUE`（最低优先级），扩展可以直接覆盖或补充它的表现。
-- **每 tick 调用 + 必须稀疏刷新**：provider 由床方块实体客户端 tick 调用，
-  内部要先比字符串、再判权限、最后才考虑生成粒子。
-  沿用 Wathe 与 NoellesRoles 的做法 `world().getRandom().nextBetween(0, 20) < 17`（约 15%）。
-- **必须放 `src/client/java`**：`BedParticleRegistry` / `BedParticleContext` 引用了
-  `MinecraftClient` / `ClientWorld` / `ClientPlayerEntity` 等客户端专属类，
-  `src/main` 里的类**绝对不要**引用它们，否则服务端启动会崩。
+  由 `client/bed/FangRolesBedParticles.init()` 聚合。
+- **返回语义**：`true` = 已处理，`false` = 继续问低优先级；
+  已识别但观察者无权看到时必须返回 `true`，不能漏给低优先级 provider。
+- **必须放 `src/client/java`**，按 `world().getRandom().nextBetween(0, 20) < 17`（约 15%）稀疏刷新。
 
-参考实现：Wathe `api/bed/BedParticleRegistry#registerDefaultProvider()`（蝎子床）、
-NoellesRoles `client/bed/NoellesRolesBedParticles` + `client/roles/bomber/BomberBedParticleHandler`（炸弹客床黑烟）。
+参考：Wathe 默认蝎子床 provider、NoellesRoles 炸弹客床粒子。
 
 ### 7.11 客户端输入：`ClientInputApi`
 
-- 统一 KeyBinding / 键盘 / 鼠标 / 滚轮 / 输入 tick 与 `ATTACK` / `ITEM_USE` / `ITEM_PICK` / `BLOCK_BREAKING`。
-- priority 越大越先；`PASS` 继续、`ALLOW` 保留原版、`BLOCK` 取消；KeyBinding 可 `override`，动作可 `handled`。
+- 统一 KeyBinding / 键盘 / 鼠标 / 滚轮 / 输入 tick 与 `ATTACK` / `ITEM_USE` / `ITEM_PICK` / `BLOCK_BREAKING`；
+  `PASS` 继续、`ALLOW` 保留原版、`BLOCK` 取消；KeyBinding 可 `override`，动作可 `handled`。
 - 短按用 `clearPressQueue`，离散动作用 `releaseKey`，真实物理键用 `isPhysicallyPressed`；服务端仍须校验。
 - 规则放 `*InputRules`，由 `FangClientInputBootstrap` 聚合；不再 mixin 原版输入类。
 
@@ -668,6 +650,17 @@ NoellesRoles `client/bed/NoellesRolesBedParticles` + `client/roles/bomber/Bomber
   结算收尾用 `ON_FINISH_FINALIZE`。规则放 `*ResetHandler`，由 `FangRolesResetBootstrap` 聚合。
 - 不要注入 `GameFunctions.resetPlayer` / `initializeGame` / `finalizeGame`，也不要恢复
   `*ReseterMixin` / `registerRoundCleanup`。
+
+### 7.15 私有组件观察者同步：`PlayerComponentSyncApi`
+
+- 私有组件默认仍只发本人；要观察目标用 `registerObserverRule(id, key, priority, rule)`，
+  owner 本人始终允许，规则返回 `true` 放行、`false` 继续。
+- 仅支持 `poison` / `mood` / `stamina` / `shop` / `note` / `grenade_throw_mode` / `instinct`；
+  自定义 CCA 不支持，授权整个 NBT 不是字段级过滤。
+- 规则只在服务端执行，不改回全员同步、不新增逐 tick 广播；每
+  `COMPONENT_OBSERVER_REFRESH_INTERVAL_TICKS`（20 tick）检查权限，新增补发、失去发空 NBT、未变不发。
+- 转职后调用 `syncTrackedToRecipient(key, player)`；原生本能心情由 `InstinctMoodSyncHandler` 注册，
+  不要重复；规则放 `*ComponentSyncHandler`，由 `FangRolesPlayerComponentSyncHandlers` 聚合。
 
 ---
 
@@ -722,13 +715,12 @@ NoellesRoles `client/bed/NoellesRolesBedParticles` + `client/roles/bomber/Bomber
 - 体力 / 心情连续值按 `GameConstants.PLAYER_STATE_SYNC_INTERVAL_TICKS = 5` 校准；
   归零 / 满值 / 任务结构变化仍立即同步。
 - 疯魔倒计时按 `GameConstants.PSYCHO_SYNC_INTERVAL_TICKS = 20` 校准；启动 / 结束立即同步。
+- 私有组件观察者用 `PlayerComponentSyncApi`；权限 20 tick 检查，未变化不发包，不能当字段级过滤。
 
 网络回归检查（新增职业 / 机制至少做一遍）：
 
-- 19~26 名玩家开局后静置 1~2 分钟，确认没有与状态变化无关的持续发送
-- 激活能力前后分别记录服务器发送 Mbps、接收 Mbps、TPS 和自定义包数量
-- 检查玩家加入、退出、死亡、旁观、断线重连和回合结束时是否**补发一次必要状态**，
-  而不是重新开启全量 tick 同步
+- 19~26 人开局静置 1~2 分钟，记录发送 / 接收 Mbps、TPS 和自定义包数量，确认无状态无关的持续发送。
+- 检查加入 / 退出 / 死亡 / 旁观 / 重连 / 回合结束时是否补发一次必要状态，而不是重开全量 tick 同步。
 
 ### 8.4 客户端分层
 
@@ -831,7 +823,7 @@ Mojang 官方映射工程）必须先转换：
 
 ### 13.1 新增职业
 
-按第六节的 50 项清单逐项核对；先写 `*Constants`，再写逻辑，最后补翻译与资源。
+按第六节清单逐项核对；先写 `*Constants`，再写逻辑，最后补翻译与资源。
 
 ### 13.2 Wathe / Harpy 接口公开化
 
@@ -871,6 +863,8 @@ Mojang 官方映射工程）必须先转换：
       没有新增对应的原版 mixin？
 - [ ] 玩家 / 世界重置是否分别用 `ResetPlayerEvent` / `ON_BEGIN_INITIALIZE` / `ON_FINISH_FINALIZE`，
       没有注入 `GameFunctions.resetPlayer` / `initializeGame` / `finalizeGame`？
+- [ ] 观察目标私有组件是否走 `FangRolesPlayerComponentSyncHandlers` + `PlayerComponentSyncApi`，
+      没有改回全员同步？
 - [ ] C2S 包服务端是否重新校验了职业 / 存活 / 冷却 / 距离 / 目标合法性 / 对局状态？
 - [ ] 能力键是否**直接复用 NoellesRoles**（`FangClientKeybindings`）而没有额外注册按键？
 - [ ] 床效果 id 是否在 `FangRolesEventIds` 共用同一常量（服务端注册与客户端粒子判断都用它）？
@@ -885,6 +879,14 @@ Mojang 官方映射工程）必须先转换：
 ---
 
 ## 十五、上游同步记录
+
+### 2026-10-20
+
+- **Wathe**：新增 `PlayerComponentSyncApi`、原生本能心情观察规则
+  `InstinctMoodSyncHandler`、`COMPONENT_OBSERVER_REFRESH_INTERVAL_TICKS`。
+- **NoellesRoles**：新增 `poison/NoellesPoisonSyncHandler` 与酒保 / 制毒师 / 医师观察规则。
+- **fangroles**：新增 `sync/FangRolesPlayerComponentSyncHandlers`，接入 bootstrap 与职业分配刷新；
+  jar 已更新并编译通过。
 
 ### 2026-10-18
 

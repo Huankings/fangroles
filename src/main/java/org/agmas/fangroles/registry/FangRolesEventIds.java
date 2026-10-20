@@ -30,13 +30,28 @@ import net.minecraft.util.Identifier;
  * public static final Identifier RAGE_MODE_ID = FangRolesCore.id("rage_mode");
  * }</pre>
  *
- * <p>本类当前为空，等待第一个职业。</p>
+ * <p>当前登记毒师的中毒来源、商店修改器、本能高亮和私有组件观察者 id。</p>
  */
 public final class FangRolesEventIds {
 
     // ---------------------------------------------------------------------
-    // 事件 / 效果 / profile id 定义区（当前为空）
+    // 毒师事件 / 回放 / 同步 id
     // ---------------------------------------------------------------------
+
+    /** 毒气弹中毒来源标记，写在 PlayerPoisonComponent 的 extra 里，用于回放区分“吸入毒气”。 */
+    public static final Identifier POISON_SOURCE_GAS_BOMB = FangRolesCore.id("poison_gas_bomb");
+
+    /** 催化剂催发中毒来源标记；只有真正催化了已中毒玩家时才会写入。 */
+    public static final Identifier POISON_SOURCE_CATALYST = FangRolesCore.id("poison_catalyst");
+
+    /** 毒师商店修改器 id。 */
+    public static final Identifier POISONER_SHOP_MODIFIER_ID = FangRolesCore.id("poisoner_shop");
+
+    /** 毒师被动透视高亮规则 id。 */
+    public static final Identifier POISONER_INSTINCT_ID = FangRolesCore.id("poisoner_poison_highlight");
+
+    /** 毒师观察其他玩家中毒状态的私有组件观察者规则 id。 */
+    public static final Identifier POISONER_POISON_SYNC_ID = FangRolesCore.id("sync/poisoner_poison_observer");
 
     private FangRolesEventIds() {
     }

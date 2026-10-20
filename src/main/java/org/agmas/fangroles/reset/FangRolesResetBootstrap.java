@@ -1,6 +1,7 @@
 package org.agmas.fangroles.reset;
 
 import org.agmas.fangroles.registry.FangRolesCore;
+import org.agmas.fangroles.roles.poisoner.PoisonerResetHandler;
 
 /**
  * fangroles 玩家级与回合级重置规则的聚合入口。
@@ -44,8 +45,7 @@ public final class FangRolesResetBootstrap {
         }
         initialized = true;
 
-        // 目前没有职业或词条需要清理状态，保留空入口。
-        // 后续在这里调用各所有者的 *ResetHandler.init()。
-        FangRolesCore.LOGGER.debug("[fangroles] 玩家 / 回合重置 API 接入完成（当前为空）");
+        PoisonerResetHandler.init();
+        FangRolesCore.LOGGER.debug("[fangroles] 玩家 / 回合重置 API 接入完成");
     }
 }

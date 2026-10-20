@@ -1,5 +1,6 @@
 package org.agmas.fangroles.client.instinct;
 
+import org.agmas.fangroles.client.roles.poisoner.PoisonerInstinctHandler;
 import org.agmas.fangroles.registry.FangRolesCore;
 
 /**
@@ -51,7 +52,7 @@ public final class FangInstinctHandlers {
      * <p>目前没有职业，空实现。</p>
      */
     public static void register() {
-        // 目前没有本能规则，空实现。
-        FangRolesCore.LOGGER.debug("[fangroles] 本能透视注册完成（当前为空）");
+        PoisonerInstinctHandler.register();
+        FangRolesCore.LOGGER.debug("[fangroles] 本能透视注册完成");
     }
 }

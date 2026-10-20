@@ -1,5 +1,9 @@
 package org.agmas.fangroles.client.bootstrap;
 
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.minecraft.client.render.entity.EmptyEntityRenderer;
+import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
+import org.agmas.fangroles.FangRolesEntities;
 import org.agmas.fangroles.registry.FangRolesCore;
 
 /**
@@ -40,7 +44,9 @@ public final class FangClientEntityRendererBootstrap {
      * 新增实体后必须回到本类补注册。</p>
      */
     public static void register() {
-        // 目前没有自定义实体，空实现。
-        FangRolesCore.LOGGER.debug("[fangroles] 客户端实体渲染器注册完成（当前为空）");
+        // 毒气弹用原版飞行物品渲染器显示物品贴图；毒气云本身无模型，只用服务端 dust 粒子表现。
+        EntityRendererRegistry.register(FangRolesEntities.POISON_GAS_BOMB, FlyingItemEntityRenderer::new);
+        EntityRendererRegistry.register(FangRolesEntities.POISON_GAS_CLOUD, EmptyEntityRenderer::new);
+        FangRolesCore.LOGGER.debug("[fangroles] 客户端实体渲染器注册完成");
     }
 }

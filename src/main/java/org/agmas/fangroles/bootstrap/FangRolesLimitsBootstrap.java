@@ -1,6 +1,8 @@
 package org.agmas.fangroles.bootstrap;
 
 import org.agmas.fangroles.registry.FangRolesCore;
+import org.agmas.fangroles.registry.FangRolesRoleRegistry;
+import org.agmas.harpymodloader.Harpymodloader;
 
 /**
  * fangroles 的 Harpy 职业最大生成数（静态上限）注册入口。
@@ -49,7 +51,11 @@ public final class FangRolesLimitsBootstrap {
      * 并写中文注释说明「为什么是这个数字」（例如：该职业强度高，每局最多 1 个）。</p>
      */
     public static void initStaticLimits() {
-        // 目前没有职业，空实现。
-        FangRolesCore.LOGGER.debug("[fangroles] 职业静态上限初始化完成（当前为空）");
+        /*
+         * 毒师是带专属毒具的杀手职业，每局最多 1 个。
+         * 多毒师会让毒气与奖励叠加过度，也会让“谁下的毒”归属变得难判断。
+         */
+        Harpymodloader.setRoleMaximum(FangRolesRoleRegistry.POISONER, 1);
+        FangRolesCore.LOGGER.debug("[fangroles] 职业静态上限初始化完成");
     }
 }

@@ -3,7 +3,7 @@
   "id": "fangroles",
   "version": "${version}",
   "name": "FangRoles",
-  "description": "基于自改版 Wathe + HarpyModLoader + NoellesRoles 的扩展职业 Mod。当前为模板骨架，尚未实现具体职业。",
+  "description": "基于自改版 Wathe + HarpyModLoader + NoellesRoles 的扩展职业 Mod。当前包含毒师职业。",
   "authors": [],
   "contact": {},
   "license": "LGPL-3.0",
@@ -22,6 +22,7 @@
   },
   "custom": {
     "cardinal-components": [
+      "fangroles:poisoner_gas"
     ]
   },
   "mixins": [

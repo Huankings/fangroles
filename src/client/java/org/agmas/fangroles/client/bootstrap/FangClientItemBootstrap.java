@@ -1,5 +1,7 @@
 package org.agmas.fangroles.client.bootstrap;
 
+import dev.doctor4t.wathe.api.client.tooltip.ItemTooltipApi;
+import org.agmas.fangroles.ModItems;
 import org.agmas.fangroles.registry.FangRolesCore;
 
 /**
@@ -43,7 +45,12 @@ public final class FangClientItemBootstrap {
      * <p>新增物品时在这里补颜色 / Tooltip / 模型谓词 / 输入处理的注册调用。</p>
      */
     public static void register() {
-        // 目前没有物品，空实现。
-        FangRolesCore.LOGGER.debug("[fangroles] 客户端物品注册完成（当前为空）");
+        // 让 Wathe 统一处理标准 tooltip 与实际冷却读秒，不要在物品类里自己拼冷却文本。
+        ItemTooltipApi.registerItems(
+                ModItems.POISON_NEEDLE,
+                ModItems.CATALYST,
+                ModItems.POISON_GAS_BOMB
+        );
+        FangRolesCore.LOGGER.debug("[fangroles] 客户端物品注册完成");
     }
 }

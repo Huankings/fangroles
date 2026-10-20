@@ -1,6 +1,8 @@
 package org.agmas.fangroles;
 
+import net.minecraft.entity.player.PlayerEntity;
 import org.agmas.fangroles.registry.FangRolesCore;
+import org.agmas.fangroles.roles.poisoner.PoisonerGasPlayerComponent;
 import org.jetbrains.annotations.NotNull;
 import org.ladysnake.cca.api.v3.entity.EntityComponentFactoryRegistry;
 import org.ladysnake.cca.api.v3.entity.EntityComponentInitializer;
@@ -69,8 +71,14 @@ public class FangRolesComponents implements EntityComponentInitializer, WorldCom
      */
     @Override
     public void registerEntityComponentFactories(@NotNull EntityComponentFactoryRegistry registry) {
-        // 目前没有玩家组件，空实现。
-        FangRolesCore.LOGGER.debug("[fangroles] 玩家 CCA 组件注册完成（当前为空）");
+        /*
+         * 毒气状态是局内瞬时状态，复活 / 下一局不能复制；只同步给本人，
+         * 因为客户端只需要用它阻止自己疾跑。
+         */
+        registry.beginRegistration(PlayerEntity.class, PoisonerGasPlayerComponent.KEY)
+                .respawnStrategy(RespawnCopyStrategy.NEVER_COPY)
+                .end(PoisonerGasPlayerComponent::new);
+        FangRolesCore.LOGGER.debug("[fangroles] 玩家 CCA 组件注册完成");
     }
 
     /**

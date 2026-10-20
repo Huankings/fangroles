@@ -1,5 +1,11 @@
 package org.agmas.fangroles;
 
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.SpawnGroup;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import org.agmas.fangroles.entity.PoisonGasBombEntity;
+import org.agmas.fangroles.entity.PoisonGasCloudEntity;
 import org.agmas.fangroles.registry.FangRolesCore;
 
 /**
@@ -30,6 +36,24 @@ public final class FangRolesEntities {
     private FangRolesEntities() {
     }
 
+    /** 毒气弹投掷物；客户端用 FlyingItemEntityRenderer 显示物品贴图。 */
+    public static final EntityType<PoisonGasBombEntity> POISON_GAS_BOMB = Registry.register(
+            Registries.ENTITY_TYPE,
+            FangRolesCore.id("poison_gas_bomb"),
+            EntityType.Builder.create(PoisonGasBombEntity::new, SpawnGroup.MISC)
+                    .dimensions(0.2F, 0.2F)
+                    .build("poison_gas_bomb")
+    );
+
+    /** 毒气云本身不渲染模型，只负责服务端扩散与粒子；客户端用 EmptyEntityRenderer。 */
+    public static final EntityType<PoisonGasCloudEntity> POISON_GAS_CLOUD = Registry.register(
+            Registries.ENTITY_TYPE,
+            FangRolesCore.id("poison_gas_cloud"),
+            EntityType.Builder.create(PoisonGasCloudEntity::new, SpawnGroup.MISC)
+                    .dimensions(0.5F, 0.5F)
+                    .build("poison_gas_cloud")
+    );
+
     /**
      * 注册所有实体类型与属性。
      *
@@ -37,7 +61,6 @@ public final class FangRolesEntities {
      * 新增实体后记得同步补客户端渲染器注册。</p>
      */
     public static void init() {
-        // 目前没有自定义实体，空实现。
-        FangRolesCore.LOGGER.debug("[fangroles] 实体注册完成（当前为空）");
+        FangRolesCore.LOGGER.debug("[fangroles] 实体注册完成");
     }
 }

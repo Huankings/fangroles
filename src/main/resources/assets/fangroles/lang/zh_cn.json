@@ -11,5 +11,26 @@
 
   "death_reason.fangroles.example": "示例死因",
 
-  "replay.fangroles.example": "%s触发了示例事件"
+  "replay.fangroles.example": "%s触发了示例事件",
+
+  "announcement.role.fangroles.poisoner": "毒师",
+  "announcement.goals.fangroles.poisoner": "用专属的毒制武器来毒害他们！",
+
+  "item.fangroles.poison_needle": "毒针",
+  "item.fangroles.poison_needle.tooltip": "右键点击存活玩家注入毒素\n初始冷却30秒 / 后续冷却45秒\n可重复使用",
+  "item.fangroles.catalyst": "催化剂",
+  "item.fangroles.catalyst.tooltip": "对中毒玩家使用：5秒内毒发身亡\n同时重置毒针冷却\n对空气或非中毒玩家使用仅重置冷却",
+  "item.fangroles.poison_gas_bomb": "毒气弹",
+  "item.fangroles.poison_gas_bomb.tooltip": "右键丢出毒气弹\n释放毒气可在空间内扩散\n可绕过半砖、楼梯等不完整方块\n在毒气中停留5秒将中毒\n30秒后毒气消散",
+
+  "tip.fangroles.poisoner.reward": "毒师：使 %s 中毒，获得 %s 金币",
+
+  "replay.item_use.fangroles.poison_needle": "%s 用毒针刺了 %s",
+  "replay.item_use.fangroles.poison_gas_bomb": "%s 投掷了毒气弹",
+  "replay.item_use.fangroles.catalyst": "%s 对 %s 使用了催化剂",
+  "replay.item_use.fangroles.catalyst.no_target": "%s 使用了催化剂",
+  "replay.poisoned.fangroles.gas_bomb.by": "%s 吸入了 %s 释放的毒气中毒",
+  "replay.poisoned.fangroles.gas_bomb": "%s 吸入毒气中毒",
+  "replay.poisoned.fangroles.catalyst.by": "%s 的毒被 %s 用催化剂催发",
+  "replay.poisoned.fangroles.catalyst": "%s 的毒被催化剂催发"
 }
